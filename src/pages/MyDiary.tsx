@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { TreePine, Plus, X, Save, Loader2, ChevronLeft, ChevronRight, Pencil, Trash2, Menu } from 'lucide-react'
+import { TreePine, Plus, X, Save, Loader2, ChevronLeft, ChevronRight, Pencil, Trash2, Menu, Calendar } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
 import ContributionGraph from '@/components/ContributionGraph'
@@ -39,13 +39,19 @@ export default function MyDiary() {
   // 모바일 메뉴
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
+  // 날짜 필터
+  const [filterYear, setFilterYear] = useState<number | null>(null)
+  const [filterMonth, setFilterMonth] = useState<number | null>(null)
+  const [filterDay, setFilterDay] = useState<number | null>(null)
+  const [filteredCount, setFilteredCount] = useState(0)
+
   useEffect(() => {
     if (!profile) {
       navigate('/login')
       return
     }
     fetchData()
-  }, [profile, page])
+  }, [profile, page, filterYear, filterMonth, filterDay])
 
   const fetchData = async () => {
     if (!profile) return
@@ -70,16 +76,111 @@ export default function MyDiary() {
 
     setTotalCount(count || 0)
 
-    // 페이지네이션된 일기 목록
-    const { data: diariesData } = await supabase
-      .from('diaries')
-      .select('*')
-      .eq('user_id', profile.id)
-      .order('created_at', { ascending: false })
-      .range((page - 1) * perPage, page * perPage - 1)
+    // 날짜 필터가 적용된 경우
+    const hasFilter = filterYear !== null || filterMonth !== null || filterDay !== null
 
-    setDiaries(diariesData || [])
+    if (hasFilter) {
+      // 날짜 범위 계산
+      let startDate: Date
+      let endDate: Date
+      const now = new Date()
+
+      if (filterYear !== null && filterMonth !== null && filterDay !== null) {
+        // 특정 일
+        startDate = new Date(filterYear, filterMonth - 1, filterDay, 0, 0, 0)
+        endDate = new Date(filterYear, filterMonth - 1, filterDay, 23, 59, 59)
+      } else if (filterYear !== null && filterMonth !== null) {
+        // 특정 월
+        startDate = new Date(filterYear, filterMonth - 1, 1, 0, 0, 0)
+        endDate = new Date(filterYear, filterMonth, 0, 23, 59, 59) // 해당 월의 마지막 날
+      } else if (filterYear !== null) {
+        // 특정 년도
+        startDate = new Date(filterYear, 0, 1, 0, 0, 0)
+        endDate = new Date(filterYear, 11, 31, 23, 59, 59)
+      } else {
+        // 년도 없이 월/일만 선택된 경우 - 현재 년도 기준
+        const year = now.getFullYear()
+        if (filterMonth !== null && filterDay !== null) {
+          startDate = new Date(year, filterMonth - 1, filterDay, 0, 0, 0)
+          endDate = new Date(year, filterMonth - 1, filterDay, 23, 59, 59)
+        } else if (filterMonth !== null) {
+          startDate = new Date(year, filterMonth - 1, 1, 0, 0, 0)
+          endDate = new Date(year, filterMonth, 0, 23, 59, 59)
+        } else {
+          // 이 경우는 발생하지 않음
+          startDate = new Date(0)
+          endDate = now
+        }
+      }
+
+      // 필터링된 일기 수
+      const { count: filteredCountResult } = await supabase
+        .from('diaries')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', profile.id)
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
+
+      setFilteredCount(filteredCountResult || 0)
+
+      // 필터링된 일기 목록
+      const { data: diariesData } = await supabase
+        .from('diaries')
+        .select('*')
+        .eq('user_id', profile.id)
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString())
+        .order('created_at', { ascending: false })
+        .range((page - 1) * perPage, page * perPage - 1)
+
+      setDiaries(diariesData || [])
+    } else {
+      // 필터 없이 전체 목록
+      setFilteredCount(count || 0)
+
+      const { data: diariesData } = await supabase
+        .from('diaries')
+        .select('*')
+        .eq('user_id', profile.id)
+        .order('created_at', { ascending: false })
+        .range((page - 1) * perPage, page * perPage - 1)
+
+      setDiaries(diariesData || [])
+    }
+
     setLoading(false)
+  }
+
+  const clearFilters = () => {
+    setFilterYear(null)
+    setFilterMonth(null)
+    setFilterDay(null)
+    setPage(1)
+  }
+
+  // 년도 옵션 생성 (2025년부터 현재 연도까지)
+  const getYearOptions = () => {
+    const currentYear = new Date().getFullYear()
+    const startYear = 2025
+    const years = []
+    for (let year = currentYear; year >= startYear; year--) {
+      years.push(year)
+    }
+    return years
+  }
+
+  // 월 옵션 생성
+  const getMonthOptions = () => {
+    return Array.from({ length: 12 }, (_, i) => i + 1)
+  }
+
+  // 일 옵션 생성 (선택된 년/월에 따라)
+  const getDayOptions = () => {
+    if (filterYear === null || filterMonth === null) {
+      return Array.from({ length: 31 }, (_, i) => i + 1)
+    }
+    const daysInMonth = new Date(filterYear, filterMonth, 0).getDate()
+    return Array.from({ length: daysInMonth }, (_, i) => i + 1)
   }
 
   const handleInputChange = (index: number, value: string) => {
@@ -188,7 +289,8 @@ export default function MyDiary() {
     })
   }
 
-  const totalPages = Math.ceil(totalCount / perPage)
+  const hasFilter = filterYear !== null || filterMonth !== null || filterDay !== null
+  const totalPages = Math.ceil((hasFilter ? filteredCount : totalCount) / perPage)
 
   if (!profile) return null
 
@@ -395,7 +497,72 @@ export default function MyDiary() {
 
         {/* 일기 목록 */}
         <section>
-          <h2 className="text-lg font-bold text-gray-800 mb-4">지난 기록</h2>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+            <h2 className="text-lg font-bold text-gray-800">지난 기록</h2>
+
+            {/* 날짜 필터 */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Calendar className="w-4 h-4 text-gray-500" />
+              <select
+                value={filterYear ?? ''}
+                onChange={(e) => {
+                  setFilterYear(e.target.value ? Number(e.target.value) : null)
+                  setPage(1)
+                }}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value="">전체 연도</option>
+                {getYearOptions().map(year => (
+                  <option key={year} value={year}>{year}년</option>
+                ))}
+              </select>
+              <select
+                value={filterMonth ?? ''}
+                onChange={(e) => {
+                  setFilterMonth(e.target.value ? Number(e.target.value) : null)
+                  setFilterDay(null) // 월 변경 시 일 초기화
+                  setPage(1)
+                }}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value="">전체 월</option>
+                {getMonthOptions().map(month => (
+                  <option key={month} value={month}>{month}월</option>
+                ))}
+              </select>
+              <select
+                value={filterDay ?? ''}
+                onChange={(e) => {
+                  setFilterDay(e.target.value ? Number(e.target.value) : null)
+                  setPage(1)
+                }}
+                className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
+              >
+                <option value="">전체 일</option>
+                {getDayOptions().map(day => (
+                  <option key={day} value={day}>{day}일</option>
+                ))}
+              </select>
+              {(filterYear !== null || filterMonth !== null || filterDay !== null) && (
+                <button
+                  onClick={clearFilters}
+                  className="px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  초기화
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 필터 결과 안내 */}
+          {(filterYear !== null || filterMonth !== null || filterDay !== null) && (
+            <p className="text-sm text-gray-500 mb-4">
+              {filterYear && `${filterYear}년`}
+              {filterMonth && ` ${filterMonth}월`}
+              {filterDay && ` ${filterDay}일`}
+              {' '}기록: <span className="font-medium text-green-600">{filteredCount}</span>개
+            </p>
+          )}
 
           {loading ? (
             <div className="flex justify-center py-10">
@@ -403,7 +570,17 @@ export default function MyDiary() {
             </div>
           ) : diaries.length === 0 ? (
             <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg p-8 text-center">
-              <p className="text-gray-500">아직 기록된 감사가 없어요</p>
+              <p className="text-gray-500">
+                {hasFilter ? '선택한 기간에 기록된 감사가 없어요' : '아직 기록된 감사가 없어요'}
+              </p>
+              {hasFilter && (
+                <button
+                  onClick={clearFilters}
+                  className="mt-3 text-sm text-green-600 hover:underline"
+                >
+                  필터 초기화
+                </button>
+              )}
             </div>
           ) : (
             <>
