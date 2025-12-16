@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+:root {
+  font-family: 'Nanum Gothic', sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: #ffffff;
+}
+
+* {
+  box-sizing: border-box;
+}
