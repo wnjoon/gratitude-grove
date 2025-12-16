@@ -301,7 +301,7 @@ export default function MyDiary() {
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <TreePine className="w-6 h-6 text-green-600" />
-            <span className="text-xl font-bold text-gray-800">감사의 정원</span>
+            <span className="text-xl font-bold text-gray-800">매일 감사 심기</span>
           </Link>
 
           {/* 데스크탑 메뉴 */}

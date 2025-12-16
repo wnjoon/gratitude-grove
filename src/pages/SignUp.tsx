@@ -93,7 +93,7 @@ export default function SignUp() {
         <div className="text-center mb-8">
           <Link to="/" className="flex items-center justify-center gap-2 mb-2">
             <TreePine className="w-8 h-8 text-green-600" />
-            <h1 className="text-2xl font-bold text-gray-800">감사의 정원</h1>
+            <h1 className="text-2xl font-bold text-gray-800">매일 감사 심기</h1>
           </Link>
           <p className="text-gray-500">안녕하세요, 새로 오신 것을 환영합니다</p>
         </div>
