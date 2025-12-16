@@ -1,27 +1,155 @@
+import { useState, useEffect } from 'react'
 import { TreePine } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
+import { supabase } from '@/lib/supabase'
+import DiaryBubble from '@/components/DiaryBubble'
+import DiaryModal from '@/components/DiaryModal'
+
+interface DiaryWithProfile {
+  id: string
+  user_id: string
+  content: string[]
+  created_at: string
+  like_count: number
+  profiles: {
+    nickname: string
+  }
+}
+
+interface LikeRecord {
+  diary_id: string
+}
 
 export default function Home() {
+  const navigate = useNavigate()
   const { profile, signOut } = useAuth()
 
-  console.log('Current profile:', profile)
+  const [diaries, setDiaries] = useState<DiaryWithProfile[]>([])
+  const [likedDiaries, setLikedDiaries] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
+  const [selectedDiary, setSelectedDiary] = useState<DiaryWithProfile | null>(null)
+
+  useEffect(() => {
+    fetchDiaries()
+    if (profile) {
+      fetchLikedDiaries()
+    }
+  }, [profile])
+
+  const fetchDiaries = async () => {
+    setLoading(true)
+    const { data, error } = await supabase
+      .from('diaries')
+      .select(`
+        id,
+        user_id,
+        content,
+        created_at,
+        like_count,
+        profiles (
+          nickname
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(21)
+
+    if (error) {
+      console.error('Error fetching diaries:', error)
+    } else {
+      setDiaries(data as unknown as DiaryWithProfile[])
+    }
+    setLoading(false)
+  }
+
+  const fetchLikedDiaries = async () => {
+    if (!profile) return
+
+    const { data } = await supabase
+      .from('likes')
+      .select('diary_id')
+      .eq('user_id', profile.id)
+
+    if (data) {
+      const likedSet = new Set((data as LikeRecord[]).map(d => d.diary_id))
+      setLikedDiaries(likedSet)
+    }
+  }
+
+  const handleLikeClick = async (e: React.MouseEvent, diaryId: string) => {
+    e.stopPropagation()
+
+    if (!profile) {
+      navigate('/login')
+      return
+    }
+
+    const isLiked = likedDiaries.has(diaryId)
+
+    if (isLiked) {
+      // 좋아요 취소
+      const { error } = await supabase
+        .from('likes')
+        .delete()
+        .eq('user_id', profile.id)
+        .eq('diary_id', diaryId)
+
+      if (!error) {
+        setLikedDiaries(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(diaryId)
+          return newSet
+        })
+        setDiaries(prev =>
+          prev.map(d =>
+            d.id === diaryId ? { ...d, like_count: d.like_count - 1 } : d
+          )
+        )
+        if (selectedDiary?.id === diaryId) {
+          setSelectedDiary(prev => prev ? { ...prev, like_count: prev.like_count - 1 } : null)
+        }
+      }
+    } else {
+      // 좋아요 추가
+      const { error } = await supabase
+        .from('likes')
+        .insert({ user_id: profile.id, diary_id: diaryId })
+
+      if (!error) {
+        setLikedDiaries(prev => new Set(prev).add(diaryId))
+        setDiaries(prev =>
+          prev.map(d =>
+            d.id === diaryId ? { ...d, like_count: d.like_count + 1 } : d
+          )
+        )
+        if (selectedDiary?.id === diaryId) {
+          setSelectedDiary(prev => prev ? { ...prev, like_count: prev.like_count + 1 } : null)
+        }
+      }
+    }
+  }
+
+  const handleModalLikeClick = () => {
+    if (selectedDiary) {
+      handleLikeClick({ stopPropagation: () => {} } as React.MouseEvent, selectedDiary.id)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
       <header className="border-b border-gray-200">
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             <TreePine className="w-6 h-6 text-green-600" />
             <span className="text-xl font-bold text-gray-800">Gratitude Grove</span>
-          </div>
+          </Link>
 
           <nav className="flex items-center gap-4">
             {profile ? (
               <>
                 <span className="text-gray-600">
-                  안녕하세요, <span className="font-medium">{profile?.nickname}</span>님
+                  안녕하세요, <span className="font-medium">{profile.nickname}</span>님
                 </span>
                 <Link
                   to="/my-diary"
@@ -58,27 +186,93 @@ export default function Home() {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto px-4 py-8">
-        <div className="text-center py-20">
-          <TreePine className="w-16 h-16 text-green-600 mx-auto mb-4" />
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">감사의 정원</h1>
-          <p className="text-gray-500 mb-8">
+        {/* 소개 섹션 */}
+        <div className="text-center py-10 mb-8">
+          <TreePine className="w-12 h-12 text-green-600 mx-auto mb-3" />
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">감사의 정원</h1>
+          <p className="text-gray-500">
             하루 세 가지 감사한 일을 기록하고, 함께 나누세요.
           </p>
-          {!profile && (
-            <Link
-              to="/signup"
-              className="inline-block px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
-            >
-              시작하기
-            </Link>
-          )}
         </div>
 
-        {/* Placeholder for Masonry Feed */}
-        <div className="text-center text-gray-400 py-10 border-2 border-dashed border-gray-200 rounded-lg">
-          메인 피드 영역 (Phase 3에서 구현)
-        </div>
+        {/* 메인 피드 - Masonry Layout */}
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <div className="w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : diaries.length === 0 ? (
+          <div className="text-center py-20">
+            <p className="text-gray-500 mb-4">아직 공유된 감사가 없어요</p>
+            {profile ? (
+              <Link
+                to="/my-diary"
+                className="inline-block px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+              >
+                첫 번째 감사 남기기
+              </Link>
+            ) : (
+              <Link
+                to="/signup"
+                className="inline-block px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+              >
+                시작하기
+              </Link>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Masonry Grid */}
+            <div className="columns-1 md:columns-2 lg:columns-3 gap-4 space-y-4">
+              {diaries.map((diary, index) => (
+                <div key={diary.id} className="break-inside-avoid mb-4">
+                  <DiaryBubble
+                    id={diary.id}
+                    nickname={diary.profiles.nickname}
+                    content={diary.content}
+                    createdAt={diary.created_at}
+                    likeCount={diary.like_count}
+                    isLiked={likedDiaries.has(diary.id)}
+                    isLoggedIn={!!profile}
+                    onClick={() => setSelectedDiary(diary)}
+                    onLikeClick={(e) => handleLikeClick(e, diary.id)}
+                    animationDelay={index * 50}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* 비로그인 사용자 안내 */}
+            {!profile && (
+              <div className="text-center py-10 mt-8 border-t border-gray-100">
+                <p className="text-gray-500 mb-4">
+                  회원으로 가입하시고 함께 감사를 공유하세요.
+                </p>
+                <Link
+                  to="/signup"
+                  className="inline-block px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition-colors"
+                >
+                  회원가입
+                </Link>
+              </div>
+            )}
+          </>
+        )}
       </main>
+
+      {/* 상세 보기 모달 */}
+      {selectedDiary && (
+        <DiaryModal
+          isOpen={!!selectedDiary}
+          onClose={() => setSelectedDiary(null)}
+          nickname={selectedDiary.profiles.nickname}
+          content={selectedDiary.content}
+          createdAt={selectedDiary.created_at}
+          likeCount={selectedDiary.like_count}
+          isLiked={likedDiaries.has(selectedDiary.id)}
+          isLoggedIn={!!profile}
+          onLikeClick={handleModalLikeClick}
+        />
+      )}
     </div>
   )
 }
