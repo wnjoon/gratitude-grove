@@ -142,7 +142,7 @@ export default function Home() {
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <TreePine className="w-6 h-6 text-green-600" />
-            <span className="text-xl font-bold text-gray-800">Gratitude Grove</span>
+            <span className="text-xl font-bold text-gray-800">감사의 정원</span>
           </Link>
 
           <nav className="flex items-center gap-4">
@@ -188,9 +188,8 @@ export default function Home() {
       <main className="max-w-6xl mx-auto px-4 py-8">
         {/* 소개 섹션 */}
         <div className="text-center py-10 mb-8">
-          <TreePine className="w-12 h-12 text-green-600 mx-auto mb-3" />
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">감사의 정원</h1>
-          <p className="text-gray-500">
+          <TreePine className="w-12 h-12 text-green-600 mx-auto mb-4" />
+          <p className="text-xl text-gray-600">
             하루 세 가지 감사한 일을 기록하고, 함께 나누세요.
           </p>
         </div>

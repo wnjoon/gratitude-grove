@@ -195,7 +195,7 @@ export default function MyDiary() {
         <div className="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
           <Link to="/" className="flex items-center gap-2">
             <TreePine className="w-6 h-6 text-green-600" />
-            <span className="text-xl font-bold text-gray-800">Gratitude Grove</span>
+            <span className="text-xl font-bold text-gray-800">감사의 정원</span>
           </Link>
 
           <nav className="flex items-center gap-4">
@@ -226,7 +226,7 @@ export default function MyDiary() {
             <p className="text-gray-600 mb-4">
               총 <span className="text-2xl font-bold text-green-600">{totalCount}</span>개의 감사를 기록했어요
             </p>
-            <ContributionGraph userId={profile.id} />
+            <ContributionGraph key={totalCount} userId={profile.id} />
           </div>
         </section>
 
