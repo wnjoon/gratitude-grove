@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { TreePine } from 'lucide-react'
+import { TreePine, Menu, X } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
 import { supabase } from '@/lib/supabase'
@@ -29,6 +29,7 @@ export default function Home() {
   const [likedDiaries, setLikedDiaries] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
   const [selectedDiary, setSelectedDiary] = useState<DiaryWithProfile | null>(null)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   useEffect(() => {
     fetchDiaries()
@@ -145,7 +146,8 @@ export default function Home() {
             <span className="text-xl font-bold text-gray-800">감사의 정원</span>
           </Link>
 
-          <nav className="flex items-center gap-4">
+          {/* 데스크탑 메뉴 */}
+          <nav className="hidden md:flex items-center gap-4">
             {profile ? (
               <>
                 <span className="text-gray-600">
@@ -181,7 +183,63 @@ export default function Home() {
               </>
             )}
           </nav>
+
+          {/* 모바일 햄버거 버튼 */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+          >
+            {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
+
+        {/* 모바일 메뉴 */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-gray-200 bg-white">
+            <div className="px-4 py-4 space-y-3">
+              {profile ? (
+                <>
+                  <p className="text-gray-600 text-sm pb-2 border-b border-gray-100">
+                    안녕하세요, <span className="font-medium">{profile.nickname}</span>님
+                  </p>
+                  <Link
+                    to="/my-diary"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-4 py-3 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                  >
+                    나의 일기
+                  </Link>
+                  <button
+                    onClick={() => {
+                      signOut()
+                      setMobileMenuOpen(false)
+                    }}
+                    className="block w-full text-left px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    로그아웃
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/login"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-4 py-3 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                  >
+                    로그인
+                  </Link>
+                  <Link
+                    to="/signup"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="block px-4 py-3 bg-green-600 text-white text-center rounded-lg hover:bg-green-700 transition-colors"
+                  >
+                    회원가입
+                  </Link>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Main Content */}
