@@ -37,11 +37,11 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-white px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-2">
+          <Link to="/" className="flex items-center justify-center gap-2 mb-2">
             <TreePine className="w-8 h-8 text-green-600" />
-            <h1 className="text-2xl font-bold text-gray-800">Gratitude Grove</h1>
-          </div>
-          <p className="text-gray-500">감사의 정원에 다시 오신 것을 환영합니다</p>
+            <h1 className="text-2xl font-bold text-gray-800">감사의 정원</h1>
+          </Link>
+          <p className="text-gray-500">안녕하세요, 다시 오셨군요</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">

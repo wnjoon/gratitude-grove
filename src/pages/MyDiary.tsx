@@ -20,6 +20,7 @@ export default function MyDiary() {
   const [diaries, setDiaries] = useState<Diary[]>([])
   const [todayDiary, setTodayDiary] = useState<Diary | null>(null)
   const [totalCount, setTotalCount] = useState(0)
+  const [yearlyCount, setYearlyCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -224,9 +225,13 @@ export default function MyDiary() {
           <h2 className="text-lg font-bold text-gray-800 mb-4">나의 감사 기록</h2>
           <div className="bg-gray-50 rounded-lg p-6">
             <p className="text-gray-600 mb-4">
-              총 <span className="text-2xl font-bold text-green-600">{totalCount}</span>개의 감사를 기록했어요
+              최근 1년간 <span className="text-2xl font-bold text-green-600">{yearlyCount}</span>개의 감사를 기록했어요
             </p>
-            <ContributionGraph key={totalCount} userId={profile.id} />
+            <ContributionGraph
+              key={totalCount}
+              userId={profile.id}
+              onYearlyCountChange={setYearlyCount}
+            />
           </div>
         </section>
 

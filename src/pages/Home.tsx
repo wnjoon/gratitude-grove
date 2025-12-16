@@ -189,7 +189,7 @@ export default function Home() {
         {/* 소개 섹션 */}
         <div className="text-center py-10 mb-8">
           <TreePine className="w-12 h-12 text-green-600 mx-auto mb-4" />
-          <p className="text-xl text-gray-600">
+          <p className="text-3xl md:text-4xl text-gray-600 font-medium">
             하루 세 가지 감사한 일을 기록하고, 함께 나누세요.
           </p>
         </div>

@@ -3,9 +3,10 @@ import { supabase } from '@/lib/supabase'
 
 interface ContributionGraphProps {
   userId: string
+  onYearlyCountChange?: (count: number) => void
 }
 
-export default function ContributionGraph({ userId }: ContributionGraphProps) {
+export default function ContributionGraph({ userId, onYearlyCountChange }: ContributionGraphProps) {
   const [contributions, setContributions] = useState<Set<string>>(new Set())
   const [loading, setLoading] = useState(true)
 
@@ -33,6 +34,7 @@ export default function ContributionGraph({ userId }: ContributionGraphProps) {
         const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
         contributionSet.add(dateKey)
       })
+      onYearlyCountChange?.(data.length)
     }
 
     setContributions(contributionSet)
@@ -47,14 +49,14 @@ export default function ContributionGraph({ userId }: ContributionGraphProps) {
     return contributions.has(getDateKey(date))
   }
 
-  // 최근 6개월 데이터 생성 (가로로 길게)
+  // 최근 1년 데이터 생성 (12개월)
   const generateCalendarData = () => {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    // 6개월 전부터 시작
+    // 11개월 전부터 시작 (현재 월 포함 12개월)
     const startDate = new Date(today)
-    startDate.setMonth(startDate.getMonth() - 5)
+    startDate.setMonth(startDate.getMonth() - 11)
     startDate.setDate(1) // 해당 월의 1일부터
 
     const months: { month: number; year: number; days: (Date | null)[][] }[] = []
@@ -130,10 +132,10 @@ export default function ContributionGraph({ userId }: ContributionGraphProps) {
   const calendarData = generateCalendarData()
 
   return (
-    <div className="overflow-x-auto">
-      <div className="inline-flex">
+    <div className="overflow-x-auto pb-2">
+      <div className="inline-flex min-w-max">
         {/* 요일 레이블 (왼쪽 고정) */}
-        <div className="flex-shrink-0 mr-2">
+        <div className="flex-shrink-0 mr-2 sticky left-0 bg-gray-50 z-10">
           <div className="h-6"></div> {/* 월 레이블 높이만큼 빈 공간 */}
           <div className="flex flex-col gap-[3px]">
             {dayLabels.map((label, index) => (
